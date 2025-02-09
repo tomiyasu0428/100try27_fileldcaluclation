@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}ホーム - 農地面積算出アプリ{% endblock %}
+
+{% block content %}
+<h2>登録済み農地一覧</h2>
+<div id="map" style="height: 500px;"></div>
+<ul>
+    {% for field in fields %}
+    <li>
+        <strong>{{ field.name }}</strong> - 面積: {{ field.area }} ha
+        <a href="{{ url_for('main.edit_field', field_id=field.id) }}">編集</a>
+        <form action="{{ url_for('main.delete_field', field_id=field.id) }}" method="post" style="display:inline;">
+            <button type="submit" onclick="return confirm('本当に削除しますか？')">削除</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}
+
+{% block scripts %}
+<!-- 登録済み農地のポリゴン描画用スクリプト -->
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+    // サーバから渡された農地情報（coordinatesはJSON文字列として保存されている前提）
+    var fields = [
+        {% for field in fields %}
+        {
+            name: "{{ field.name }}",
+            area: {{ field.area }},
+            coordinates: {{ field.coordinates | safe }}
+        },
+        {% endfor %}
+    ];
+    // indexページ用のマップ初期化関数
+    initMap(fields);
+</script>
+{% endblock %}

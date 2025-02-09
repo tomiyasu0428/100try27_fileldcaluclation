@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}農地登録 - 農地管理アプリ{% endblock %}
+
+{% block content %}
+<h2>農地新規登録</h2>
+<form action="{{ url_for('main.register_field') }}" method="post">
+    <label for="name">農地名:</label>
+    <input type="text" name="name" id="name" required><br><br>
+
+    <!-- 描画したポリゴンの座標情報と面積を hidden 項目で送信 -->
+    <input type="hidden" name="coordinates" id="coordinates">
+    <input type="hidden" name="area" id="area">
+
+    <div id="map" style="height: 500px;"></div>
+
+    <button type="submit">保存</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<!-- Drawing Libraryを利用したポリゴン描画用スクリプト -->
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+    // 農地新規登録用のマップ初期化関数
+    // 描画完了時にコールバックで座標と面積を hidden 項目にセット
+    initMapForDrawing(function(coordinates, area) {
+        document.getElementById('coordinates').value = JSON.stringify(coordinates);
+        document.getElementById('area').value = area;
+    });
+</script>
+{% endblock %}

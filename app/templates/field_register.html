@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}農地登録 - 農地面積算出アプリ{% endblock %}
+
+{% block head %}
+<style>
+    .search-container {
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 5px;
+    }
+    .search-container input[type="text"] {
+        padding: 8px;
+        width: 300px;
+        margin-right: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .search-container button {
+        padding: 8px 15px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .search-container button:hover {
+        background-color: #45a049;
+    }
+    .area-display {
+        margin: 15px 0;
+        padding: 10px;
+        background-color: #e8f5e9;
+        border-radius: 5px;
+        display: none;
+    }
+    .area-display.visible {
+        display: block;
+    }
+    .area-value {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #2e7d32;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>農地新規登録</h2>
+
+<!-- 住所検索フォーム -->
+<div class="search-container">
+    <label for="address">住所検索:</label>
+    <input type="text" id="address" placeholder="住所を入力してください">
+    <button type="button" onclick="searchAddress()">検索</button>
+</div>
+
+<!-- 面積表示エリア -->
+<div id="areaDisplay" class="area-display">
+    <span>描画した農地の面積: </span>
+    <span id="areaValue" class="area-value">0</span>
+    <span> ha</span>
+</div>
+
+<form action="{{ url_for('main.register_field') }}" method="post">
+    <label for="name">農地名:</label>
+    <input type="text" name="name" id="name" required><br><br>
+
+    <!-- 描画したポリゴンの座標情報と面積を hidden 項目で送信 -->
+    <input type="hidden" name="coordinates" id="coordinates">
+    <input type="hidden" name="area" id="area">
+
+    <div id="map" style="height: 500px;"></div>
+
+    <button type="submit">保存</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<!-- Drawing Libraryを利用したポリゴン描画用スクリプト -->
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+    // APIキーのデバッグ
+    console.log('Google Maps API Key:', '{{ GOOGLE_MAPS_API_KEY }}' || 'Not set');
+    
+    // 農地新規登録用のマップ初期化関数
+    // 描画完了時にコールバックで座標と面積を hidden 項目にセット
+    try {
+        let map = initMapForDrawing(function(coordinates, area) {
+            document.getElementById('coordinates').value = JSON.stringify(coordinates);
+            document.getElementById('area').value = area;
+            // 面積表示を更新
+            document.getElementById('areaValue').textContent = area;
+            document.getElementById('areaDisplay').classList.add('visible');
+        });
+    } catch (error) {
+        console.error('Map initialization error:', error);
+    }
+</script>
+{% endblock %}

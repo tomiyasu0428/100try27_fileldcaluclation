@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}農地編集 - 農地管理アプリ{% endblock %}
+
+{% block content %}
+<h2>農地編集</h2>
+<form action="{{ url_for('main.edit_field', field_id=field.id) }}" method="post">
+    <label for="name">農地名:</label>
+    <input type="text" name="name" id="name" value="{{ field.name }}" required><br><br>
+
+    <!-- 既存の境界情報と面積を hidden 項目にセット -->
+    <input type="hidden" name="coordinates" id="coordinates" value='{{ field.coordinates | safe }}'>
+    <input type="hidden" name="area" id="area" value="{{ field.area }}">
+
+    <div id="map" style="height: 500px;"></div>
+
+    <button type="submit">更新</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+    // 編集用のマップ初期化関数
+    // 既存のポリゴン情報を表示し、編集後の情報を hidden 項目にセット
+    var existingCoordinates = JSON.parse(document.getElementById('coordinates').value);
+    initMapForEditing(existingCoordinates, function(coordinates, area) {
+        document.getElementById('coordinates').value = JSON.stringify(coordinates);
+        document.getElementById('area').value = area;
+    });
+</script>
+{% endblock %}
