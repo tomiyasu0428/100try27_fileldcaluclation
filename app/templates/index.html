@@ -1,309 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}ホーム - 農場管理アプリ{% endblock %}
-
-{% block head %}
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet">
-<style>
-    .dashboard-container {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-    
-    .card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        background-color: #fff;
-        overflow: hidden;
-    }
-    
-    .card-header {
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #ddd;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .card-body {
-        padding: 15px;
-    }
-    
-    .btn {
-        display: inline-block;
-        padding: 8px 15px;
-        margin-bottom: 0;
-        font-size: 14px;
-        font-weight: 400;
-        line-height: 1.42857143;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: middle;
-        cursor: pointer;
-        border: 1px solid transparent;
-        border-radius: 4px;
-        text-decoration: none;
-    }
-    
-    .btn-primary {
-        color: #fff;
-        background-color: #007bff;
-        border-color: #007bff;
-    }
-    
-    .btn-sm {
-        padding: 5px 10px;
-        font-size: 12px;
-    }
-    
-    #calendar {
-        height: 400px;
-    }
-    
-    .task-list {
-        max-height: 300px;
-        overflow-y: auto;
-    }
-    
-    .task-item {
-        padding: 10px;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .task-item:last-child {
-        border-bottom: none;
-    }
-    
-    .task-info {
-        flex-grow: 1;
-    }
-    
-    .field-preview {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-    
-    .field-card {
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        width: calc(33.33% - 10px);
-        min-width: 250px;
-        overflow: hidden;
-    }
-    
-    .field-card-header {
-        padding: 10px;
-        background-color: #007bff;
-        color: white;
-    }
-    
-    .field-card-body {
-        padding: 10px;
-    }
-    
-    .badge {
-        padding: 5px 10px;
-        border-radius: 4px;
-        color: white;
-        font-size: 0.9em;
-    }
-    
-    .badge-primary {
-        background-color: #007bff;
-    }
-    
-    .badge-warning {
-        background-color: #ffc107;
-        color: black;
-    }
-    
-    .badge-success {
-        background-color: #28a745;
-    }
-
-    .field-map-small {
-        height: 150px;
-        margin-bottom: 10px;
-    }
-    
-    @media (min-width: 768px) {
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-        }
-    }
-    
-    .view-all-link {
-        display: block;
-        text-align: center;
-        margin-top: 10px;
-        text-decoration: none;
-        color: #007bff;
-    }
-</style>
-{% endblock %}
+{% block title %}ホーム - 農地面積算出アプリ{% endblock %}
 
 {% block content %}
-<h2>農場管理ダッシュボード</h2>
-
-<div class="dashboard-container">
-    <!-- カレンダーと今日のタスクの行 -->
-    <div class="dashboard-grid">
-        <!-- カレンダーカード -->
-        <div class="card">
-            <div class="card-header">
-                <h3>作業カレンダー</h3>
-                <a href="{{ url_for('main.calendar') }}" class="btn btn-primary btn-sm">全画面表示</a>
-            </div>
-            <div class="card-body">
-                <div id="calendar"></div>
-            </div>
-        </div>
-        
-        <!-- 直近のタスクカード -->
-        <div class="card">
-            <div class="card-header">
-                <h3>今後の予定</h3>
-                <a href="{{ url_for('main.create_task') }}" class="btn btn-primary btn-sm">タスク追加</a>
-            </div>
-            <div class="card-body">
-                <div class="task-list">
-                    {% for task in upcoming_tasks %}
-                    <div class="task-item">
-                        <div class="task-info">
-                            <strong>{{ task.title }}</strong><br>
-                            圃場: {{ task.field.name }}<br>
-                            日付: {{ task.scheduled_date.strftime('%Y-%m-%d') }}<br>
-                            {% if task.start_time %}
-                                時間: {{ task.start_time.strftime('%H:%M') }}
-                                {% if task.end_time %} - {{ task.end_time.strftime('%H:%M') }}{% endif %}
-                            {% else %}
-                                時間: 終日
-                            {% endif %}
-                        </div>
-                        <div>
-                            {% if task.status == 'scheduled' %}
-                                <span class="badge badge-primary">予定</span>
-                            {% elif task.status == 'in_progress' %}
-                                <span class="badge badge-warning">進行中</span>
-                            {% else %}
-                                <span class="badge badge-success">完了</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% else %}
-                    <p>予定されているタスクはありません。</p>
-                    {% endfor %}
-                </div>
-                <a href="{{ url_for('main.list_tasks') }}" class="view-all-link">すべてのタスクを表示</a>
-            </div>
-        </div>
-    </div>
-    
-    <!-- 圃場プレビュー -->
-    <div class="card">
-        <div class="card-header">
-            <h3>圃場一覧</h3>
-            <a href="{{ url_for('main.register_field') }}" class="btn btn-primary btn-sm">圃場登録</a>
-        </div>
-        <div class="card-body">
-            <div class="field-preview">
-                {% for field in fields %}
-                <div class="field-card">
-                    <div class="field-card-header">
-                        {{ field.name }}
-                    </div>
-                    <div class="field-card-body">
-                        <div class="field-map-small" id="field-map-{{ field.id }}"></div>
-                        <div><strong>面積:</strong> {{ field.area }} ha</div>
-                        <div class="field-actions" style="margin-top: 10px;">
-                            <a href="{{ url_for('main.edit_field', field_id=field.id) }}" class="btn btn-primary btn-sm">詳細・編集</a>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <p>登録されている圃場はありません。</p>
-                {% endfor %}
-            </div>
-            {% if fields|length > 3 %}
-            <a href="{{ url_for('main.field_list') }}" class="view-all-link">すべての圃場を表示</a>
-            {% endif %}
-        </div>
-    </div>
-</div>
+<h2>登録済み農地一覧</h2>
+<div id="map" style="height: 500px;"></div>
+<ul>
+    {% for field in fields %}
+    <li>
+        <strong>{{ field.name }}</strong> - 面積: {{ field.area }} ha
+        <a href="{{ url_for('main.edit_field', field_id=field.id) }}">編集</a>
+        <form action="{{ url_for('main.delete_field', field_id=field.id) }}" method="post" style="display:inline;">
+            <button type="submit" onclick="return confirm('本当に削除しますか？')">削除</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales-all.min.js"></script>
+<!-- 登録済み農地のポリゴン描画用スクリプト -->
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
-    // カレンダーの初期化
-    document.addEventListener('DOMContentLoaded', function() {
-        var calendarEl = document.getElementById('calendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek'
-            },
-            locale: 'ja',
-            height: 'auto',
-            events: "{{ url_for('main.get_tasks') }}",
-            eventTimeFormat: {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            },
-            navLinks: true,
-            editable: false,
-            dayMaxEvents: true
-        });
-        calendar.render();
-        
-        // 各圃場の小さなマップの初期化
+    // サーバから渡された農地情報（coordinatesはJSON文字列として保存されている前提）
+    var fields = [
         {% for field in fields %}
-        initSmallMap('field-map-{{ field.id }}', {{ field.coordinates | safe }}, "{{ field.name }}");
+        {
+            name: "{{ field.name }}",
+            area: {{ field.area }},
+            coordinates: {{ field.coordinates | safe }}
+        },
         {% endfor %}
-    });
-    
-    // 小さなマップの初期化関数
-    function initSmallMap(elementId, coordinates, fieldName) {
-        var mapElement = document.getElementById(elementId);
-        if (!mapElement) return;
-        
-        var map = new google.maps.Map(mapElement, {
-            zoom: 16,
-            disableDefaultUI: true,
-            zoomControl: false,
-            streetViewControl: false
-        });
-        
-        var polygon = new google.maps.Polygon({
-            paths: coordinates,
-            strokeColor: "#FF0000",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: "#FF0000",
-            fillOpacity: 0.35,
-            map: map
-        });
-        
-        // ポリゴンに合わせてマップの表示領域を調整
-        var bounds = new google.maps.LatLngBounds();
-        coordinates.forEach(function(coord) {
-            bounds.extend(new google.maps.LatLng(coord.lat, coord.lng));
-        });
-        map.fitBounds(bounds);
-    }
+    ];
+    // indexページ用のマップ初期化関数
+    initMap(fields);
 </script>
 {% endblock %}

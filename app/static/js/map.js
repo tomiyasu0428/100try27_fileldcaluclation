@@ -36,44 +36,6 @@ function initMap(fields) {
     }
 }
 
-// ダッシュボード用：小さなマップに圃場を表示する関数
-function initSmallMap(elementId, coordinates, fieldName) {
-    try {
-        var mapElement = document.getElementById(elementId);
-        if (!mapElement) return;
-        
-        var smallMap = new google.maps.Map(mapElement, {
-            disableDefaultUI: true,
-            zoomControl: false,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false
-        });
-        
-        var polygon = new google.maps.Polygon({
-            paths: coordinates,
-            strokeColor: "#FF0000",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: "#FF0000",
-            fillOpacity: 0.35,
-            map: smallMap
-        });
-        
-        // ポリゴンの境界に合わせて表示範囲を調整
-        var bounds = new google.maps.LatLngBounds();
-        coordinates.forEach(function(coord) {
-            bounds.extend(new google.maps.LatLng(coord.lat, coord.lng));
-        });
-        smallMap.fitBounds(bounds);
-        
-        return smallMap;
-    } catch (error) {
-        console.error('Small map initialization error:', error);
-        // 小さなマップなのでエラーメッセージは非表示
-    }
-}
-
 // 住所検索機能
 function searchAddress() {
     try {
