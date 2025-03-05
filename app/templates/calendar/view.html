@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}カレンダー - 農場管理アプリ{% endblock %}
+
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet">
+<style>
+    #calendar {
+        max-width: 1100px;
+        margin: 0 auto;
+        margin-top: 20px;
+    }
+    .btn {
+        display: inline-block;
+        padding: 8px 15px;
+        margin-bottom: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.42857143;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-decoration: none;
+    }
+    .btn-primary {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-success {
+        color: #fff;
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    .calendar-controls {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>作業カレンダー</h2>
+<div class="calendar-controls">
+    <a href="{{ url_for('main.list_tasks') }}" class="btn btn-primary">タスク一覧</a>
+    <a href="{{ url_for('main.create_task') }}" class="btn btn-success">新規タスク登録</a>
+</div>
+
+<div id="calendar"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales-all.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+            },
+            locale: 'ja',
+            events: "{{ url_for('main.get_tasks') }}",
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            },
+            navLinks: true,
+            editable: false,
+            dayMaxEvents: true
+        });
+        calendar.render();
+    });
+</script>
+{% endblock %}
