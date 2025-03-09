@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}作業予定編集 - 農場管理アプリ{% endblock %}
+
+{% block head %}
+<style>
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    .form-control {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    textarea.form-control {
+        height: 100px;
+    }
+    .btn {
+        display: inline-block;
+        padding: 8px 15px;
+        margin-bottom: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.42857143;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-decoration: none;
+    }
+    .btn-primary {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-primary:hover {
+        background-color: #0069d9;
+    }
+    .btn-secondary {
+        color: #fff;
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>作業予定編集</h2>
+<form method="post">
+    <div class="form-group">
+        <label for="task_name">作業名:</label>
+        <input type="text" class="form-control" id="task_name" name="task_name" value="{{ schedule.task_name }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="task_type">作業種別:</label>
+        <select class="form-control" id="task_type" name="task_type">
+            <option value="">作業種別を選択 (オプション)</option>
+            {% for task_type in task_types %}
+            <option value="{{ task_type }}" {% if schedule.task_type == task_type %}selected{% endif %}>{{ task_type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="plan_id">作付け計画:</label>
+        <select class="form-control" id="plan_id" name="plan_id" required>
+            {% for plan in plans %}
+            <option value="{{ plan.id }}" {% if plan.id == schedule.plan_id %}selected{% endif %}>{{ plan.crop.crop_name }} 第{{ plan.cultivation_number }}作 - {{ plan.field.name }} ({{ plan.year }}年)</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="scheduled_date">予定日:</label>
+        <input type="date" class="form-control" id="scheduled_date" name="scheduled_date" value="{{ schedule.scheduled_date.strftime('%Y-%m-%d') }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="start_time">開始時間 (オプション):</label>
+        <input type="time" class="form-control" id="start_time" name="start_time" value="{{ schedule.start_time.strftime('%H:%M') if schedule.start_time else '' }}">
+    </div>
+    
+    <div class="form-group">
+        <label for="end_time">終了時間 (オプション):</label>
+        <input type="time" class="form-control" id="end_time" name="end_time" value="{{ schedule.end_time.strftime('%H:%M') if schedule.end_time else '' }}">
+    </div>
+    
+    <div class="form-group">
+        <label for="actual_date">実施日 (オプション):</label>
+        <input type="date" class="form-control" id="actual_date" name="actual_date" value="{{ schedule.actual_date.strftime('%Y-%m-%d') if schedule.actual_date else '' }}">
+    </div>
+    
+    <div class="form-group">
+        <label for="completion_status">ステータス:</label>
+        <select class="form-control" id="completion_status" name="completion_status">
+            {% for status_code, status_name in statuses %}
+            <option value="{{ status_code }}" {% if schedule.completion_status == status_code %}selected{% endif %}>{{ status_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="notes">メモ (オプション):</label>
+        <textarea class="form-control" id="notes" name="notes" rows="3">{{ schedule.notes or '' }}</textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">更新</button>
+    <a href="{{ url_for('main.list_schedules') }}" class="btn btn-secondary">キャンセル</a>
+</form>
+{% endblock %}

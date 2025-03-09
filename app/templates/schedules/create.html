@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}作業予定登録 - 農場管理アプリ{% endblock %}
+
+{% block head %}
+<style>
+    .form-group {
+        margin-bottom: 25px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        font-size: 1.05em;
+    }
+    .form-control {
+        width: 100%;
+        padding: 12px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px; /* モバイルでのズームを防止する最小サイズ */
+        height: auto;
+        min-height: 44px; /* タッチターゲットの最小サイズ */
+    }
+    textarea.form-control {
+        height: 120px;
+    }
+    /* 日付選択用のスタイル */
+    .datepicker {
+        padding: 10px 12px;
+        min-height: 44px;
+        cursor: pointer;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>');
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 20px;
+    }
+    
+    /* 日付選択カレンダーのスタイル */
+    .ui-datepicker {
+        width: 300px;
+        padding: 10px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .ui-datepicker .ui-datepicker-header {
+        position: relative;
+        padding: 8px 0;
+        background: #f8f9fa;
+        border-radius: 4px 4px 0 0;
+    }
+    
+    .ui-datepicker .ui-datepicker-prev, 
+    .ui-datepicker .ui-datepicker-next {
+        position: absolute;
+        top: 8px;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+    }
+    
+    .ui-datepicker .ui-datepicker-prev {
+        left: 5px;
+    }
+    
+    .ui-datepicker .ui-datepicker-next {
+        right: 5px;
+    }
+    
+    .ui-datepicker .ui-datepicker-title {
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .ui-datepicker table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 5px;
+    }
+    
+    .ui-datepicker th {
+        padding: 8px 0;
+        text-align: center;
+        font-weight: bold;
+        border: 0;
+        background: #f8f9fa;
+    }
+    
+    .ui-datepicker td {
+        border: 0;
+        padding: 1px;
+    }
+    
+    .ui-datepicker td span, 
+    .ui-datepicker td a {
+        display: block;
+        padding: 8px;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 4px;
+    }
+    
+    .ui-datepicker td a:hover {
+        background: #e9ecef;
+    }
+    
+    .ui-datepicker .ui-state-active {
+        background: #007bff;
+        color: #fff;
+    }
+    .btn {
+        display: inline-block;
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        margin-right: 10px;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.5;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-decoration: none;
+        min-width: 120px;
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+    .btn-primary {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-primary:hover {
+        background-color: #0069d9;
+    }
+    .btn-secondary {
+        color: #fff;
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+    .help-text {
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+    }
+    .alert-warning {
+        color: #856404;
+        background-color: #fff3cd;
+        border-color: #ffeeba;
+    }
+    /* レスポンシブデザインの改善 */
+    @media (max-width: 768px) {
+        .form-control {
+            padding: 14px;
+            font-size: 16px;
+            min-height: 48px;
+        }
+        
+        .datepicker {
+            padding: 12px 14px;
+            min-height: 48px;
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+    }
+    
+    /* フォーカス時のスタイル改善 */
+    .form-control:focus {
+        border-color: #007bff;
+        outline: 0;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>新規作業予定登録</h2>
+
+{% if not plans %}
+<div class="alert alert-info">
+    <strong>情報:</strong> 作付け計画が登録されていません。作付け計画に関連しない作業予定を登録できます。必要に応じて<a href="{{ url_for('main.create_plan') }}">作付け計画登録</a>も行えます。
+</div>
+{% endif %}
+
+<form method="post">
+    <div class="form-group">
+        <label for="task_name">作業名:</label>
+        <input type="text" class="form-control" id="task_name" name="task_name" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="task_type">作業種別:</label>
+        <select class="form-control" id="task_type" name="task_type">
+            <option value="">作業種別を選択 (オプション)</option>
+            {% for task_type in task_types %}
+            <option value="{{ task_type }}">{{ task_type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="plan_id">作付け計画 (オプション):</label>
+        <select class="form-control" id="plan_id" name="plan_id">
+            <option value="">作付け計画を選択してください (任意)</option>
+            {% for plan in plans %}
+            <option value="{{ plan.id }}">{{ plan.crop.crop_name }} 第{{ plan.cultivation_number }}作 - {{ plan.field.name }} ({{ plan.year }}年)</option>
+            {% endfor %}
+        </select>
+        <div class="help-text">作付け計画に関連しない作業の場合は選択不要です</div>
+    </div>
+    
+    <div class="form-group">
+        <label for="field_id">圃場 (作付け計画なしの場合):</label>
+        <select class="form-control" id="field_id" name="field_id">
+            <option value="">圃場を選択してください (任意)</option>
+            {% for field in fields %}
+            <option value="{{ field.id }}">{{ field.name }} ({{ field.area }}ha)</option>
+            {% endfor %}
+        </select>
+        <div class="help-text">作付け計画を選択した場合は自動的に圃場が設定されます</div>
+    </div>
+    
+    <div class="form-group">
+        <label for="scheduled_date">予定日:</label>
+        <input type="text" class="form-control datepicker" id="scheduled_date" name="scheduled_date" required placeholder="日付を選択してください" readonly>
+    </div>
+    
+    <div class="form-group">
+        <label for="notes">メモ (オプション):</label>
+        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">登録</button>
+    <a href="{{ url_for('main.list_schedules') }}" class="btn btn-secondary">キャンセル</a>
+</form>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+<script>
+    // 作付け計画と圃場選択の連動処理と日付選択の初期化
+    document.addEventListener('DOMContentLoaded', function() {
+        const planSelect = document.getElementById('plan_id');
+        const fieldSelect = document.getElementById('field_id');
+        const fieldGroup = fieldSelect.closest('.form-group');
+        
+        // 日付選択の初期化
+        $("#scheduled_date").datepicker({
+            dateFormat: 'yy-mm-dd',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: 'c-1:c+2',
+            showOtherMonths: true,
+            selectOtherMonths: true,
+            firstDay: 1, // 月曜日から開始
+            showButtonPanel: true,
+            closeText: '閉じる',
+            currentText: '今日',
+            monthNames: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+            monthNamesShort: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+            dayNames: ['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'],
+            dayNamesShort: ['日','月','火','水','木','金','土'],
+            dayNamesMin: ['日','月','火','水','木','金','土']
+        });
+        
+        // 日付入力フィールドをクリックしたときにカレンダーを表示
+        $("#scheduled_date").on('click', function() {
+            $(this).datepicker("show");
+        });
+        
+        // 作付け計画選択時の処理
+        planSelect.addEventListener('change', function() {
+            if (this.value === '') {
+                // 作付け計画が選択されていない場合、圃場選択を有効化
+                fieldSelect.disabled = false;
+                fieldGroup.style.opacity = '1';
+            } else {
+                // 作付け計画が選択されている場合、圃場選択を無効化
+                fieldSelect.value = '';
+                fieldSelect.disabled = true;
+                fieldGroup.style.opacity = '0.5';
+            }
+        });
+        
+        // 初期状態の設定
+        if (planSelect.value !== '') {
+            fieldSelect.disabled = true;
+            fieldGroup.style.opacity = '0.5';
+        }
+    });
+</script>
+{% endblock %}

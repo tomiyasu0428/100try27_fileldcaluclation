@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}作業予定一覧 - 農場管理アプリ{% endblock %}
+
+{% block head %}
+<style>
+    .schedule-container {
+        margin-top: 20px;
+    }
+    
+    .schedule-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    
+    .schedule-table th, .schedule-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    
+    .schedule-table th {
+        background-color: #f2f2f2;
+    }
+    
+    .schedule-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    
+    .btn {
+        display: inline-block;
+        padding: 6px 12px;
+        margin-bottom: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.42857143;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-decoration: none;
+    }
+    
+    .btn-primary {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .btn-info {
+        color: #fff;
+        background-color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .btn-success {
+        color: #fff;
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .btn-danger {
+        color: #fff;
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+    
+    .action-buttons {
+        white-space: nowrap;
+    }
+    
+    .badge {
+        padding: 5px 10px;
+        border-radius: 4px;
+        color: white;
+        font-size: 0.9em;
+    }
+    
+    .badge-primary {
+        background-color: #007bff;
+    }
+    
+    .badge-warning {
+        background-color: #ffc107;
+        color: black;
+    }
+    
+    .badge-success {
+        background-color: #28a745;
+    }
+    
+    .badge-danger {
+        background-color: #dc3545;
+    }
+    
+    .filter-options {
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>作業予定一覧</h2>
+<a href="{{ url_for('main.create_schedule') }}" class="btn btn-primary">新規作業予定登録</a>
+<a href="{{ url_for('main.calendar') }}" class="btn btn-info">カレンダー表示</a>
+
+<div class="schedule-container">
+    {% if schedules %}
+    <table class="schedule-table">
+        <thead>
+            <tr>
+                <th>作業名</th>
+                <th>作業種別</th>
+                <th>作付け計画</th>
+                <th>圃場</th>
+                <th>予定日</th>
+                <th>時間</th>
+                <th>実施日</th>
+                <th>状態</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for schedule in schedules %}
+            <tr>
+                <td>{{ schedule.task_name }}</td>
+                <td>{{ schedule.task_type or '-' }}</td>
+                <td>{{ schedule.plan.crop.crop_name }} 第{{ schedule.plan.cultivation_number }}作 ({{ schedule.plan.year }}年)</td>
+                <td>{{ schedule.plan.field.name }}</td>
+                <td>{{ schedule.scheduled_date.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    {% if schedule.start_time %}
+                        {{ schedule.start_time.strftime('%H:%M') }}
+                        {% if schedule.end_time %} - {{ schedule.end_time.strftime('%H:%M') }}{% endif %}
+                    {% else %}
+                        終日
+                    {% endif %}
+                </td>
+                <td>{{ schedule.actual_date.strftime('%Y-%m-%d') if schedule.actual_date else '-' }}</td>
+                <td>
+                    {% if schedule.completion_status == 'scheduled' %}
+                        <span class="badge badge-primary">予定</span>
+                    {% elif schedule.completion_status == 'in_progress' %}
+                        <span class="badge badge-warning">進行中</span>
+                    {% elif schedule.completion_status == 'completed' %}
+                        <span class="badge badge-success">完了</span>
+                    {% else %}
+                        <span class="badge badge-danger">延期</span>
+                    {% endif %}
+                </td>
+                <td class="action-buttons">
+                    <a href="{{ url_for('main.edit_schedule', schedule_id=schedule.id) }}" class="btn btn-sm btn-info">編集</a>
+                    <form action="{{ url_for('main.delete_schedule', schedule_id=schedule.id) }}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('本当に削除しますか？')">削除</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>登録されている作業予定はありません。</p>
+    {% endif %}
+</div>
+{% endblock %}

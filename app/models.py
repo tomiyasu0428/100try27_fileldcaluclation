@@ -12,19 +12,63 @@ class Field(db.Model):
         return f"<Field {self.name}>"
 
 
-class Task(db.Model):
+class Crop(db.Model):
+    """作物マスタモデル"""
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(120), nullable=False)
-    description = db.Column(db.Text)
+    crop_name = db.Column(db.String(64), nullable=False)
+    default_growing_days = db.Column(db.Integer, nullable=True)  # 標準栽培日数
+    season_options = db.Column(db.String(255), nullable=True)  # 栽培適期（JSON形式で保存）
+    description = db.Column(db.Text, nullable=True)
+    
+    def __repr__(self):
+        return f"<Crop {self.crop_name}>"
+
+
+class CultivationPlan(db.Model):
+    """作付け計画モデル"""
+    id = db.Column(db.Integer, primary_key=True)
+    crop_id = db.Column(db.Integer, db.ForeignKey('crop.id'), nullable=False)
     field_id = db.Column(db.Integer, db.ForeignKey('field.id'), nullable=False)
-    scheduled_date = db.Column(db.Date, nullable=False)
-    start_time = db.Column(db.Time)
-    end_time = db.Column(db.Time)
-    status = db.Column(db.String(20), default='scheduled')  # scheduled, in_progress, completed
+    cultivation_number = db.Column(db.Integer, default=1)  # 作付け回数
+    year = db.Column(db.Integer, nullable=False)  # 栽培年
+    planned_start_date = db.Column(db.Date, nullable=False)
+    planned_end_date = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(20), default='planned')  # planned, in_progress, completed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # リレーションシップ
-    field = db.relationship('Field', backref=db.backref('tasks', lazy='dynamic'))
+    crop = db.relationship('Crop', backref=db.backref('cultivation_plans', lazy='dynamic'))
+    field = db.relationship('Field', backref=db.backref('cultivation_plans', lazy='dynamic'))
     
     def __repr__(self):
-        return f'<Task {self.title}>'
+        return f"<CultivationPlan {self.crop.crop_name} #{self.cultivation_number} ({self.year})>"
+
+
+class Schedule(db.Model):
+    """作業予定モデル（旧Taskモデルの拡張）"""
+    id = db.Column(db.Integer, primary_key=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey('cultivation_plan.id'), nullable=True)
+    task_name = db.Column(db.String(120), nullable=False)
+    task_type = db.Column(db.String(50), nullable=True)  # 作業種別（例：播種、施肥、収穫など）
+    scheduled_date = db.Column(db.Date, nullable=False)
+    start_time = db.Column(db.Time, nullable=True)
+    end_time = db.Column(db.Time, nullable=True)
+    actual_date = db.Column(db.Date, nullable=True)  # 実際に作業を行った日付
+    completion_status = db.Column(db.String(20), default='scheduled')  # scheduled, in_progress, completed, postponed
+    notes = db.Column(db.Text, nullable=True)  # 作業メモ
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # リレーションシップ
+    plan = db.relationship('CultivationPlan', backref=db.backref('schedules', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f"<Schedule {self.task_name} for Plan #{self.plan_id}>"
+
+
+# 以下のモデルは後続の開発フェーズで追加予定
+"""
+class Task(db.Model):
+    # Taskモデルの名前を保持し、既存コードとの互換性のために一時的に残しておくことも検討
+    # 完全に移行が終わったら削除する
+    pass
+"""
