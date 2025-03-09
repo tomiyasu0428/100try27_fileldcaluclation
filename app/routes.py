@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 from app import db
-from app.models import Field, Crop, CultivationPlan, Schedule
+from app.models import Field, Crop, CultivationPlan, Schedule, CropStage
 import json
 from datetime import datetime, timedelta
 
@@ -111,17 +111,41 @@ def list_crops():
 def create_crop():
     if request.method == "POST":
         crop_name = request.form.get("crop_name")
-        growing_days = request.form.get("default_growing_days")
-        season_options = request.form.get("season_options")
         description = request.form.get("description")
         
         crop = Crop(
             crop_name=crop_name,
-            default_growing_days=int(growing_days) if growing_days else None,
-            season_options=season_options,
             description=description
         )
         db.session.add(crop)
+        db.session.commit()
+        
+        # ステージ情報の処理
+        stage_data = {}
+        for key, value in request.form.items():
+            if key.startswith('stages['):
+                # キー例: stages[0][stage_name]
+                # インデックスとプロパティを抽出
+                parts = key.split('][')  # ['stages[0', 'stage_name]']
+                index = int(parts[0].split('[')[1])  # '0'
+                prop = parts[1].rstrip(']')  # 'stage_name'
+                
+                if index not in stage_data:
+                    stage_data[index] = {}
+                stage_data[index][prop] = value
+        
+        # ステージを保存
+        for index, stage_info in stage_data.items():
+            if 'stage_name' in stage_info and 'days_from_start' in stage_info:
+                stage = CropStage(
+                    crop_id=crop.id,
+                    stage_name=stage_info['stage_name'],
+                    days_from_start=int(stage_info['days_from_start']),
+                    description=stage_info.get('description', ''),
+                    order=int(stage_info.get('order', index))
+                )
+                db.session.add(stage)
+        
         db.session.commit()
         
         flash("作物情報が正常に登録されました。")
@@ -136,10 +160,52 @@ def edit_crop(crop_id):
     
     if request.method == "POST":
         crop.crop_name = request.form.get("crop_name")
-        growing_days = request.form.get("default_growing_days")
-        crop.default_growing_days = int(growing_days) if growing_days else None
-        crop.season_options = request.form.get("season_options")
         crop.description = request.form.get("description")
+        
+        # ステージ情報の処理
+        stage_data = {}
+        for key, value in request.form.items():
+            if key.startswith('stages['):
+                parts = key.split('][')  # ['stages[0', 'stage_name]']
+                index = int(parts[0].split('[')[1])  # '0'
+                prop = parts[1].rstrip(']')  # 'stage_name'
+                
+                if index not in stage_data:
+                    stage_data[index] = {}
+                stage_data[index][prop] = value
+        
+        # 既存のステージIDを取得
+        stage_ids = []
+        for index, stage_info in stage_data.items():
+            if 'id' in stage_info and stage_info['id']:
+                stage_ids.append(int(stage_info['id']))
+        
+        # 既存のステージで、送信されてこなかったものを削除
+        for stage in crop.stages:
+            if stage.id not in stage_ids:
+                db.session.delete(stage)
+        
+        # ステージを更新または新規追加
+        for index, stage_info in stage_data.items():
+            if 'stage_name' in stage_info and 'days_from_start' in stage_info:
+                if 'id' in stage_info and stage_info['id']:
+                    # 既存ステージの更新
+                    stage = CropStage.query.get(int(stage_info['id']))
+                    if stage and stage.crop_id == crop.id:
+                        stage.stage_name = stage_info['stage_name']
+                        stage.days_from_start = int(stage_info['days_from_start'])
+                        stage.description = stage_info.get('description', '')
+                        stage.order = int(stage_info.get('order', index))
+                else:
+                    # 新規ステージの追加
+                    stage = CropStage(
+                        crop_id=crop.id,
+                        stage_name=stage_info['stage_name'],
+                        days_from_start=int(stage_info['days_from_start']),
+                        description=stage_info.get('description', ''),
+                        order=int(stage_info.get('order', index))
+                    )
+                    db.session.add(stage)
         
         db.session.commit()
         flash("作物情報が更新されました。")
@@ -178,10 +244,25 @@ def create_plan():
         if request.form.get("planned_end_date"):
             planned_end_date = datetime.strptime(request.form.get("planned_end_date"), "%Y-%m-%d").date()
         else:
-            # 作物の標準栽培日数から終了日を計算
+            # 作物の栽培ステージから終了日を計算
             crop = Crop.query.get(crop_id)
-            if crop and crop.default_growing_days:
-                planned_end_date = planned_start_date + timedelta(days=crop.default_growing_days)
+            if crop and crop.stages:
+                # 収穫ステージを探すか、それがなければ最後のステージを使用
+                harvest_stage = None
+                sorted_stages = sorted(crop.stages, key=lambda s: s.days_from_start)
+                
+                for stage in sorted_stages:
+                    if stage.stage_name == "収穫":
+                        harvest_stage = stage
+                        break
+                
+                if harvest_stage:
+                    # 収穫ステージがあれば、その日数を使用
+                    planned_end_date = planned_start_date + timedelta(days=harvest_stage.days_from_start)
+                elif sorted_stages:
+                    # 収穫ステージがなければ、最後のステージの日数を使用
+                    last_stage = sorted_stages[-1]
+                    planned_end_date = planned_start_date + timedelta(days=last_stage.days_from_start + 7)  # 最後のステージからさらに1週間
         
         plan = CultivationPlan(
             crop_id=crop_id,
@@ -195,7 +276,36 @@ def create_plan():
         db.session.add(plan)
         db.session.commit()
         
-        flash("作付け計画が正常に作成されました。")
+        # 作物の栽培ステージに基づいて作業予定を自動生成
+        crop = Crop.query.get(crop_id)
+        if crop and crop.stages:
+            # 栽培ステージをdaysの昇順でソート
+            sorted_stages = sorted(crop.stages, key=lambda s: s.days_from_start)
+            
+            # 各ステージに対して作業予定を作成
+            for stage in sorted_stages:
+                # ステージの開始日を計算（開始日 + ステージの日数）
+                stage_date = planned_start_date + timedelta(days=stage.days_from_start)
+                
+                # ステージ名をタスク名として設定
+                task_name = f"{stage.stage_name}"
+                
+                # 作業予定を作成して保存
+                schedule = Schedule(
+                    plan_id=plan.id,
+                    task_name=task_name,
+                    task_type=stage.stage_name,  # タスクタイプにもステージ名を使用
+                    scheduled_date=stage_date,
+                    notes=stage.description or f"{crop.crop_name}の{stage.stage_name}作業",
+                    completion_status='scheduled'
+                )
+                db.session.add(schedule)
+            
+            db.session.commit()
+            flash(f"作付け計画と{len(sorted_stages)}件の作業予定が正常に作成されました。")
+        else:
+            flash("作付け計画が正常に作成されました。栽培ステージが登録されていないため、作業予定は自動生成されませんでした。")
+            
         return redirect(url_for("main.list_plans"))
     
     crops = Crop.query.all()
@@ -211,6 +321,9 @@ def edit_plan(plan_id):
     plan = CultivationPlan.query.get_or_404(plan_id)
     
     if request.method == "POST":
+        old_start_date = plan.planned_start_date
+        old_crop_id = plan.crop_id
+        
         plan.crop_id = request.form.get("crop_id")
         plan.field_id = request.form.get("field_id")
         plan.cultivation_number = request.form.get("cultivation_number")
@@ -222,8 +335,51 @@ def edit_plan(plan_id):
         
         plan.status = request.form.get("status")
         
+        # 作付け計画を保存
         db.session.commit()
-        flash("作付け計画が更新されました。")
+        
+        # 作物が変更された、または開始日が変更された場合、作業予定を再生成する
+        if int(plan.crop_id) != old_crop_id or plan.planned_start_date != old_start_date:
+            regenerate_schedules = request.form.get("regenerate_schedules") == "on"
+            
+            if regenerate_schedules:
+                # 既存の作業予定を削除
+                Schedule.query.filter_by(plan_id=plan.id).delete()
+                
+                # 作物の栽培ステージに基づいて作業予定を再生成
+                crop = Crop.query.get(plan.crop_id)
+                if crop and crop.stages:
+                    # 栽培ステージをdaysの昇順でソート
+                    sorted_stages = sorted(crop.stages, key=lambda s: s.days_from_start)
+                    
+                    # 各ステージに対して作業予定を作成
+                    for stage in sorted_stages:
+                        # ステージの開始日を計算（開始日 + ステージの日数）
+                        stage_date = plan.planned_start_date + timedelta(days=stage.days_from_start)
+                        
+                        # ステージ名をタスク名として設定
+                        task_name = f"{stage.stage_name}"
+                        
+                        # 作業予定を作成して保存
+                        schedule = Schedule(
+                            plan_id=plan.id,
+                            task_name=task_name,
+                            task_type=stage.stage_name,
+                            scheduled_date=stage_date,
+                            notes=stage.description or f"{crop.crop_name}の{stage.stage_name}作業",
+                            completion_status='scheduled'
+                        )
+                        db.session.add(schedule)
+                    
+                    db.session.commit()
+                    flash(f"作付け計画が更新され、{len(sorted_stages)}件の作業予定が再生成されました。")
+                else:
+                    flash("作付け計画が更新されました。栽培ステージが登録されていないため、作業予定は自動生成されませんでした。")
+            else:
+                flash("作付け計画が更新されました。")
+        else:
+            flash("作付け計画が更新されました。")
+            
         return redirect(url_for("main.list_plans"))
     
     crops = Crop.query.all()
@@ -363,8 +519,19 @@ def get_schedules():
     for schedule in schedules:
         # 作付け計画情報を取得
         plan = schedule.plan
-        crop = plan.crop
-        field = plan.field
+        
+        # 作付け計画、作物、圃場の情報を初期化
+        crop_name = "未設定"
+        field_name = "未設定"
+        cultivation_number = 0
+        
+        # 作付け計画がある場合は関連情報を取得
+        if plan:
+            if plan.crop:
+                crop_name = plan.crop.crop_name
+            if plan.field:
+                field_name = plan.field.name
+            cultivation_number = plan.cultivation_number
         
         # 開始/終了時間の処理
         start = schedule.scheduled_date.isoformat()
@@ -396,22 +563,36 @@ def get_schedules():
         elif schedule.task_type == "収穫":
             color = "#fd7e14"  # オレンジ
         
-        events.append({
+        # タイトルの設定
+        title = schedule.task_name
+        if plan:
+            title = f"{schedule.task_name} - {crop_name} 第{cultivation_number}作 - {field_name}"
+        
+        event = {
             "id": schedule.id,
-            "title": f"{schedule.task_name} - {crop.crop_name} 第{plan.cultivation_number}作 - {field.name}",
+            "title": title,
             "start": start,
             "end": end,
             "url": url_for("main.edit_schedule", schedule_id=schedule.id),
             "backgroundColor": color,
             "borderColor": color,
-            "textColor": "#fff",
-            "extendedProps": {
-                "crop": crop.crop_name,
-                "field": field.name,
-                "cultivation_number": plan.cultivation_number,
-                "task_type": schedule.task_type
-            }
-        })
+            "textColor": "#fff"
+        }
+        
+        # 追加情報の設定
+        event["extendedProps"] = {
+            "task_type": schedule.task_type
+        }
+        
+        # 作付け計画がある場合は追加情報を拡張
+        if plan:
+            event["extendedProps"].update({
+                "crop": crop_name,
+                "field": field_name,
+                "cultivation_number": cultivation_number
+            })
+        
+        events.append(event)
     
     return jsonify(events)
 

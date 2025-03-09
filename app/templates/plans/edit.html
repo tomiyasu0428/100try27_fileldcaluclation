@@ -65,7 +65,14 @@
         <label for="crop_id">作物:</label>
         <select class="form-control" id="crop_id" name="crop_id" required>
             {% for crop in crops %}
-            <option value="{{ crop.id }}" data-growing-days="{{ crop.default_growing_days or 0 }}" {% if crop.id == plan.crop_id %}selected{% endif %}>{{ crop.crop_name }}</option>
+            <option value="{{ crop.id }}" {% if crop.id == plan.crop_id %}selected{% endif %}>
+                {{ crop.crop_name }}
+                {% if crop.stages %}
+                    ({{ crop.stages|length }}ステージ)
+                {% else %}
+                    (ステージなし)
+                {% endif %}
+            </option>
             {% endfor %}
         </select>
     </div>
@@ -113,48 +120,51 @@
         </select>
     </div>
     
+    <div class="form-group" id="regenerate-schedules-container">
+        <label>
+            <input type="checkbox" id="regenerate_schedules" name="regenerate_schedules" checked>
+            作業予定を再生成する
+        </label>
+        <div class="help-text">作物または開始予定日を変更した場合、既存の作業予定を削除して栽培ステージに基づいた新しい作業予定を作成します。</div>
+    </div>
+    
     <button type="submit" class="btn btn-primary">更新</button>
     <a href="{{ url_for('main.list_plans') }}" class="btn btn-secondary">キャンセル</a>
 </form>
 
 <script>
-    // 開始日が変更されたときに、終了日を自動計算する
-    document.getElementById('planned_start_date').addEventListener('change', function() {
-        calculateEndDate();
-    });
+    // 初期化変数
+    var originalCropId = "{{ plan.crop_id }}";
+    var originalStartDate = "{{ plan.planned_start_date.strftime('%Y-%m-%d') }}";
+    var cropChanged = false;
+    var startDateChanged = false;
     
-    // 作物が変更されたときに、標準栽培日数に基づいて終了日を再計算する
-    document.getElementById('crop_id').addEventListener('change', function() {
-        calculateEndDate();
-    });
-    
-    function calculateEndDate() {
-        var startDateInput = document.getElementById('planned_start_date');
-        var cropSelect = document.getElementById('crop_id');
-        var endDateInput = document.getElementById('planned_end_date');
-        
-        // 既に終了日が入力されている場合や開始日がない場合は何もしない
-        if (endDateInput.value || !startDateInput.value) {
-            return;
+    // 表示・非表示切り替え関数
+    function updateRegenrateCheckboxVisibility() {
+        var container = document.getElementById('regenerate-schedules-container');
+        if (cropChanged || startDateChanged) {
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
         }
-        
-        // 選択された作物の標準栽培日数を取得
-        var selectedOption = cropSelect.options[cropSelect.selectedIndex];
-        var growingDays = parseInt(selectedOption.getAttribute('data-growing-days') || 0);
-        
-        // 標準栽培日数が設定されていない場合は何もしない
-        if (!growingDays) {
-            return;
-        }
-        
-        // 開始日から標準栽培日数を足して終了日を計算
-        var startDate = new Date(startDateInput.value);
-        var endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + growingDays);
-        
-        // 終了日を設定
-        var endDateStr = endDate.toISOString().split('T')[0];
-        endDateInput.value = endDateStr;
     }
+    
+    // 初期化時にチェックボックスを非表示
+    document.addEventListener('DOMContentLoaded', function() {
+        updateRegenrateCheckboxVisibility();
+    });
+    
+    // 作物セレクトボックスの変更イベント
+    document.getElementById('crop_id').addEventListener('change', function() {
+        cropChanged = (this.value !== originalCropId);
+        updateRegenrateCheckboxVisibility();
+    });
+    
+    // 開始日の変更イベント
+    document.getElementById('planned_start_date').addEventListener('change', function() {
+        startDateChanged = (this.value !== originalStartDate);
+        updateRegenrateCheckboxVisibility();
+    });
+    
 </script>
 {% endblock %}

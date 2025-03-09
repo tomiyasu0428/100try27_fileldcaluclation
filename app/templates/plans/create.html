@@ -90,7 +90,14 @@
         <select class="form-control" id="crop_id" name="crop_id" required {% if not crops %}disabled{% endif %}>
             <option value="">作物を選択してください</option>
             {% for crop in crops %}
-            <option value="{{ crop.id }}" data-growing-days="{{ crop.default_growing_days or 0 }}">{{ crop.crop_name }}</option>
+            <option value="{{ crop.id }}" data-has-stages="{{ 'true' if crop.stages else 'false' }}">
+                {{ crop.crop_name }}
+                {% if crop.stages %}
+                    ({{ crop.stages|length }}ステージ)
+                {% else %}
+                    (ステージなし)
+                {% endif %}
+            </option>
             {% endfor %}
         </select>
     </div>
@@ -128,7 +135,7 @@
     <div class="form-group">
         <label for="planned_end_date">終了予定日 (オプション):</label>
         <input type="date" class="form-control" id="planned_end_date" name="planned_end_date">
-        <div class="help-text">入力しない場合、作物の標準栽培日数から自動計算されます</div>
+        <div class="help-text">入力しない場合、作物の栽培ステージから自動計算されます</div>
     </div>
     
     <button type="submit" class="btn btn-primary" {% if not crops or not fields %}disabled{% endif %}>登録</button>
@@ -136,43 +143,19 @@
 </form>
 
 <script>
-    // 開始日が変更されたときに、終了日を自動計算する
-    document.getElementById('planned_start_date').addEventListener('change', function() {
-        calculateEndDate();
-    });
-    
-    // 作物が変更されたときに、標準栽培日数に基づいて終了日を再計算する
+    // 作物が変更された時の处理
     document.getElementById('crop_id').addEventListener('change', function() {
-        calculateEndDate();
+        var selectedOption = this.options[this.selectedIndex];
+        var hasStages = selectedOption.getAttribute('data-has-stages') === 'true';
+        var helpText = document.querySelector('#planned_end_date + .help-text');
+        
+        if (!hasStages) {
+            helpText.innerHTML = '選択した作物に栽培ステージが設定されていません。終了日を手動で入力してください。';
+            helpText.style.color = '#dc3545';
+        } else {
+            helpText.innerHTML = '入力しない場合、作物の栽培ステージから自動計算されます';
+            helpText.style.color = '#6c757d';
+        }
     });
-    
-    function calculateEndDate() {
-        var startDateInput = document.getElementById('planned_start_date');
-        var cropSelect = document.getElementById('crop_id');
-        var endDateInput = document.getElementById('planned_end_date');
-        
-        // 開始日が入力されていない場合は何もしない
-        if (!startDateInput.value) {
-            return;
-        }
-        
-        // 選択された作物の標準栽培日数を取得
-        var selectedOption = cropSelect.options[cropSelect.selectedIndex];
-        var growingDays = parseInt(selectedOption.getAttribute('data-growing-days') || 0);
-        
-        // 標準栽培日数が設定されていない場合は何もしない
-        if (!growingDays) {
-            return;
-        }
-        
-        // 開始日から標準栽培日数を足して終了日を計算
-        var startDate = new Date(startDateInput.value);
-        var endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + growingDays);
-        
-        // 終了日を設定
-        var endDateStr = endDate.toISOString().split('T')[0];
-        endDateInput.value = endDateStr;
-    }
 </script>
 {% endblock %}
