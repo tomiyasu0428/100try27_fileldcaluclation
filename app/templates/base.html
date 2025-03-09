@@ -2,20 +2,82 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}農地管理アプリ{% endblock %}</title>
+    <title>{% block title %}農場管理アプリ{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Google Maps API キーは環境変数から読み込んだ値を利用 -->
     <script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=geometry,drawing,places"></script>
     {% block head %}{% endblock %}
+    <style>
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+        
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        
+        nav a {
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <h1>農地管理アプリ</h1>
+        <h1>農場管理アプリ</h1>
         <nav>
             <a href="{{ url_for('main.index') }}">ホーム</a>
-            <a href="{{ url_for('main.register_field') }}">圃場登録</a>
-            <a href="{{ url_for('main.list_tasks') }}">タスク管理</a>
-            <a href="{{ url_for('main.calendar') }}">カレンダー</a>
+            
+            <div class="dropdown">
+                <a href="{{ url_for('main.field_list') }}">圃場管理</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('main.field_list') }}">圃場一覧</a>
+                    <a href="{{ url_for('main.register_field') }}">新規圃場登録</a>
+                </div>
+            </div>
+            
+            <div class="dropdown">
+                <a href="{{ url_for('main.list_crops') }}">作物管理</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('main.list_crops') }}">作物一覧</a>
+                    <a href="{{ url_for('main.create_crop') }}">新規作物登録</a>
+                </div>
+            </div>
+            
+            <div class="dropdown">
+                <a href="{{ url_for('main.list_plans') }}">作付け計画</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('main.list_plans') }}">計画一覧</a>
+                    <a href="{{ url_for('main.create_plan') }}">新規計画登録</a>
+                </div>
+            </div>
+            
+
         </nav>
     </header>
     <main>

@@ -107,17 +107,16 @@
             <div class="field-map" id="field-map-{{ field.id }}"></div>
             <div class="field-info">
                 <div><strong>面積:</strong> {{ field.area }} ha</div>
-                {% if field.tasks.count() > 0 %}
-                <div><strong>予定タスク:</strong> {{ field.tasks.filter_by(status='scheduled').count() }}件</div>
-                <div><strong>進行中タスク:</strong> {{ field.tasks.filter_by(status='in_progress').count() }}件</div>
+                {% if field.cultivation_plans.count() > 0 %}
+                <div><strong>作付け計画:</strong> {{ field.cultivation_plans.count() }}件</div>
                 {% else %}
-                <div>関連するタスクはありません</div>
+                <div>作付け計画は登録されていません</div>
                 {% endif %}
             </div>
             <div class="field-actions">
                 <a href="{{ url_for('main.edit_field', field_id=field.id) }}" class="btn btn-primary">編集</a>
                 <form action="{{ url_for('main.delete_field', field_id=field.id) }}" method="post" style="display:inline;">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('本当に削除しますか？関連するタスクもすべて削除されます。')">削除</button>
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('本当に削除しますか？関連する作付け計画や作業予定もすべて削除されます。')">削除</button>
                 </form>
             </div>
         </div>

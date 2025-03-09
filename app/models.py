@@ -20,6 +20,9 @@ class Crop(db.Model):
     season_options = db.Column(db.String(255), nullable=True)  # 栽培適期（JSON形式で保存）
     description = db.Column(db.Text, nullable=True)
     
+    # リレーションシップ
+    stages = db.relationship('CropStage', backref='crop', lazy=True, cascade='all, delete-orphan')
+    
     def __repr__(self):
         return f"<Crop {self.crop_name}>"
 
@@ -63,6 +66,20 @@ class Schedule(db.Model):
     
     def __repr__(self):
         return f"<Schedule {self.task_name} for Plan #{self.plan_id}>"
+
+
+class CropStage(db.Model):
+    """作物栽培ステージモデル"""
+    id = db.Column(db.Integer, primary_key=True)
+    crop_id = db.Column(db.Integer, db.ForeignKey('crop.id'), nullable=False)
+    stage_name = db.Column(db.String(100), nullable=False)  # ステージ名（播種、苗管理、植え付け、収穫など）
+    days_from_start = db.Column(db.Integer, nullable=False)  # 開始日からの日数
+    description = db.Column(db.Text, nullable=True)  # 説明
+    order = db.Column(db.Integer, default=0)  # 表示順
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<CropStage {self.stage_name} for Crop #{self.crop_id}>"
 
 
 # 以下のモデルは後続の開発フェーズで追加予定

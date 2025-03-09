@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}作物一覧 - 農場管理アプリ{% endblock %}
+
+{% block head %}
+<style>
+    .crop-container {
+        margin-top: 20px;
+    }
+    
+    .crop-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    
+    .crop-table th, .crop-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    
+    .crop-table th {
+        background-color: #f2f2f2;
+    }
+    
+    .crop-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    
+    .btn {
+        display: inline-block;
+        padding: 6px 12px;
+        margin-bottom: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.42857143;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-decoration: none;
+    }
+    
+    .btn-primary {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .btn-info {
+        color: #fff;
+        background-color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .btn-danger {
+        color: #fff;
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+    
+    .action-buttons {
+        white-space: nowrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>作物マスタ一覧</h2>
+<a href="{{ url_for('main.create_crop') }}" class="btn btn-primary">新規作物登録</a>
+
+<div class="crop-container">
+    {% if crops %}
+    <table class="crop-table">
+        <thead>
+            <tr>
+                <th>作物名</th>
+                <th>栽培日数</th>
+                <th>栽培適期</th>
+                <th>説明</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for crop in crops %}
+            <tr>
+                <td>{{ crop.crop_name }}</td>
+                <td>{{ crop.default_growing_days or '-' }} 日</td>
+                <td>{{ crop.season_options or '-' }}</td>
+                <td>{{ crop.description or '-' }}</td>
+                <td class="action-buttons">
+                    <a href="{{ url_for('main.edit_crop', crop_id=crop.id) }}" class="btn btn-sm btn-info">編集</a>
+                    <form action="{{ url_for('main.delete_crop', crop_id=crop.id) }}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('本当に削除しますか？関連する作付け計画も全て削除されます。')">削除</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>登録されている作物はありません。</p>
+    {% endif %}
+</div>
+{% endblock %}

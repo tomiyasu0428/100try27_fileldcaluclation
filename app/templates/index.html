@@ -172,7 +172,7 @@
         <div class="card">
             <div class="card-header">
                 <h3>今後の予定</h3>
-                <a href="{{ url_for('main.create_task') }}" class="btn btn-primary btn-sm">タスク追加</a>
+                <a href="{{ url_for('main.create_schedule') }}" class="btn btn-primary btn-sm">作業予定追加</a>
             </div>
             <div class="card-body">
                 <div class="task-list">
@@ -203,7 +203,7 @@
                     <p>予定されているタスクはありません。</p>
                     {% endfor %}
                 </div>
-                <a href="{{ url_for('main.list_tasks') }}" class="view-all-link">すべてのタスクを表示</a>
+                <a href="{{ url_for('main.list_schedules') }}" class="view-all-link">すべての作業予定を表示</a>
             </div>
         </div>
     </div>
@@ -258,7 +258,7 @@
             },
             locale: 'ja',
             height: 'auto',
-            events: "{{ url_for('main.get_tasks') }}",
+            events: "{{ url_for('main.get_schedules') }}",
             eventTimeFormat: {
                 hour: '2-digit',
                 minute: '2-digit',

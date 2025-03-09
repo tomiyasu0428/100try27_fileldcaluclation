@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}作付け計画編集 - 農場管理アプリ{% endblock %}
+
+{% block head %}
+<style>
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    .form-control {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .btn {
+        display: inline-block;
+        padding: 8px 15px;
+        margin-bottom: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.42857143;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-decoration: none;
+    }
+    .btn-primary {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-primary:hover {
+        background-color: #0069d9;
+    }
+    .btn-secondary {
+        color: #fff;
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+    .help-text {
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>作付け計画編集</h2>
+<form method="post">
+    <div class="form-group">
+        <label for="crop_id">作物:</label>
+        <select class="form-control" id="crop_id" name="crop_id" required>
+            {% for crop in crops %}
+            <option value="{{ crop.id }}" data-growing-days="{{ crop.default_growing_days or 0 }}" {% if crop.id == plan.crop_id %}selected{% endif %}>{{ crop.crop_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="field_id">圃場:</label>
+        <select class="form-control" id="field_id" name="field_id" required>
+            {% for field in fields %}
+            <option value="{{ field.id }}" {% if field.id == plan.field_id %}selected{% endif %}>{{ field.name }} ({{ field.area }} ha)</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="cultivation_number">作付け回数:</label>
+        <input type="number" class="form-control" id="cultivation_number" name="cultivation_number" min="1" max="10" value="{{ plan.cultivation_number }}" required>
+        <div class="help-text">同じ年に同じ作物を複数回栽培する場合の回数</div>
+    </div>
+    
+    <div class="form-group">
+        <label for="year">栽培年:</label>
+        <select class="form-control" id="year" name="year" required>
+            {% for year in years %}
+            <option value="{{ year }}" {% if year == plan.year %}selected{% endif %}>{{ year }}年</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="planned_start_date">開始予定日:</label>
+        <input type="date" class="form-control" id="planned_start_date" name="planned_start_date" value="{{ plan.planned_start_date.strftime('%Y-%m-%d') }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="planned_end_date">終了予定日 (オプション):</label>
+        <input type="date" class="form-control" id="planned_end_date" name="planned_end_date" value="{{ plan.planned_end_date.strftime('%Y-%m-%d') if plan.planned_end_date else '' }}">
+    </div>
+    
+    <div class="form-group">
+        <label for="status">ステータス:</label>
+        <select class="form-control" id="status" name="status" required>
+            <option value="planned" {% if plan.status == 'planned' %}selected{% endif %}>計画中</option>
+            <option value="in_progress" {% if plan.status == 'in_progress' %}selected{% endif %}>進行中</option>
+            <option value="completed" {% if plan.status == 'completed' %}selected{% endif %}>完了</option>
+        </select>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">更新</button>
+    <a href="{{ url_for('main.list_plans') }}" class="btn btn-secondary">キャンセル</a>
+</form>
+
+<script>
+    // 開始日が変更されたときに、終了日を自動計算する
+    document.getElementById('planned_start_date').addEventListener('change', function() {
+        calculateEndDate();
+    });
+    
+    // 作物が変更されたときに、標準栽培日数に基づいて終了日を再計算する
+    document.getElementById('crop_id').addEventListener('change', function() {
+        calculateEndDate();
+    });
+    
+    function calculateEndDate() {
+        var startDateInput = document.getElementById('planned_start_date');
+        var cropSelect = document.getElementById('crop_id');
+        var endDateInput = document.getElementById('planned_end_date');
+        
+        // 既に終了日が入力されている場合や開始日がない場合は何もしない
+        if (endDateInput.value || !startDateInput.value) {
+            return;
+        }
+        
+        // 選択された作物の標準栽培日数を取得
+        var selectedOption = cropSelect.options[cropSelect.selectedIndex];
+        var growingDays = parseInt(selectedOption.getAttribute('data-growing-days') || 0);
+        
+        // 標準栽培日数が設定されていない場合は何もしない
+        if (!growingDays) {
+            return;
+        }
+        
+        // 開始日から標準栽培日数を足して終了日を計算
+        var startDate = new Date(startDateInput.value);
+        var endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + growingDays);
+        
+        // 終了日を設定
+        var endDateStr = endDate.toISOString().split('T')[0];
+        endDateInput.value = endDateStr;
+    }
+</script>
+{% endblock %}

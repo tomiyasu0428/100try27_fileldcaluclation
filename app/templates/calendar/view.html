@@ -35,6 +35,26 @@
         background-color: #28a745;
         border-color: #28a745;
     }
+    .filter-controls {
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    .filter-group {
+        display: inline-block;
+        margin-right: 15px;
+    }
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    .filter-group select {
+        padding: 6px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
     .calendar-controls {
         margin-bottom: 20px;
     }
@@ -44,8 +64,32 @@
 {% block content %}
 <h2>作業カレンダー</h2>
 <div class="calendar-controls">
-    <a href="{{ url_for('main.list_tasks') }}" class="btn btn-primary">タスク一覧</a>
-    <a href="{{ url_for('main.create_task') }}" class="btn btn-success">新規タスク登録</a>
+    <a href="{{ url_for('main.list_schedules') }}" class="btn btn-primary">作業予定一覧</a>
+    <a href="{{ url_for('main.create_schedule') }}" class="btn btn-success">新規作業予定登録</a>
+</div>
+
+<div class="filter-controls">
+    <div class="filter-group">
+        <label for="crop-filter">作物:</label>
+        <select id="crop-filter">
+            <option value="all">すべて</option>
+            <!-- JSで動的に追加 -->
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="field-filter">圃場:</label>
+        <select id="field-filter">
+            <option value="all">すべて</option>
+            <!-- JSで動的に追加 -->
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="task-type-filter">作業種別:</label>
+        <select id="task-type-filter">
+            <option value="all">すべて</option>
+            <!-- JSで動的に追加 -->
+        </select>
+    </div>
 </div>
 
 <div id="calendar"></div>
@@ -57,6 +101,14 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
+        var allEvents = []; // すべてのイベントを保持
+        
+        // フィルター要素
+        var cropFilter = document.getElementById('crop-filter');
+        var fieldFilter = document.getElementById('field-filter');
+        var taskTypeFilter = document.getElementById('task-type-filter');
+        
+        // カレンダーの初期化
         var calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             headerToolbar: {
@@ -65,7 +117,7 @@
                 right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
             },
             locale: 'ja',
-            events: "{{ url_for('main.get_tasks') }}",
+            events: "{{ url_for('main.get_schedules') }}",
             eventTimeFormat: {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -73,9 +125,118 @@
             },
             navLinks: true,
             editable: false,
-            dayMaxEvents: true
+            dayMaxEvents: true,
+            eventDidMount: function(info) {
+                // イベントが表示されるたびに呼ばれる
+                // ツールチップなどのカスタマイズが可能
+            },
+            eventClick: function(info) {
+                // イベントをクリックした際の動作
+                // デフォルトのリンク動作を使用
+            },
+            eventContent: function(arg) {
+                // イベントの内容をカスタマイズ（オプション）
+                return {
+                    html: arg.event.title
+                };
+            }
         });
-        calendar.render();
+        
+        // イベントを読み込んで、フィルターオプションを設定
+        fetch("{{ url_for('main.get_schedules') }}")
+            .then(response => response.json())
+            .then(data => {
+                allEvents = data;
+                
+                // フィルターオプションを準備
+                let crops = new Set();
+                let fields = new Set();
+                let taskTypes = new Set();
+                
+                data.forEach(event => {
+                    if (event.extendedProps && event.extendedProps.crop) {
+                        crops.add(event.extendedProps.crop);
+                    }
+                    if (event.extendedProps && event.extendedProps.field) {
+                        fields.add(event.extendedProps.field);
+                    }
+                    if (event.extendedProps && event.extendedProps.task_type) {
+                        taskTypes.add(event.extendedProps.task_type);
+                    }
+                });
+                
+                // 作物フィルターの選択肢を追加
+                crops.forEach(crop => {
+                    let option = document.createElement('option');
+                    option.value = crop;
+                    option.textContent = crop;
+                    cropFilter.appendChild(option);
+                });
+                
+                // 圃場フィルターの選択肢を追加
+                fields.forEach(field => {
+                    let option = document.createElement('option');
+                    option.value = field;
+                    option.textContent = field;
+                    fieldFilter.appendChild(option);
+                });
+                
+                // 作業種別フィルターの選択肢を追加
+                taskTypes.forEach(taskType => {
+                    if (!taskType) return; // 空の作業種別は追加しない
+                    let option = document.createElement('option');
+                    option.value = taskType;
+                    option.textContent = taskType;
+                    taskTypeFilter.appendChild(option);
+                });
+                
+                // カレンダーを描画
+                calendar.render();
+            })
+            .catch(error => {
+                console.error('Error fetching events:', error);
+                // エラー時もカレンダーを描画
+                calendar.render();
+            });
+        
+        // フィルター変更時の処理
+        function applyFilters() {
+            let selectedCrop = cropFilter.value;
+            let selectedField = fieldFilter.value;
+            let selectedTaskType = taskTypeFilter.value;
+            
+            // 全てのイベントをいったん削除
+            calendar.removeAllEvents();
+            
+            // フィルター条件に合うイベントだけを追加
+            allEvents.forEach(event => {
+                let shouldAdd = true;
+                
+                if (selectedCrop !== 'all' && 
+                    (!event.extendedProps || event.extendedProps.crop !== selectedCrop)) {
+                    shouldAdd = false;
+                }
+                
+                if (selectedField !== 'all' && 
+                    (!event.extendedProps || event.extendedProps.field !== selectedField)) {
+                    shouldAdd = false;
+                }
+                
+                if (selectedTaskType !== 'all' && 
+                    (!event.extendedProps || event.extendedProps.task_type !== selectedTaskType)) {
+                    shouldAdd = false;
+                }
+                
+                if (shouldAdd) {
+                    calendar.addEvent(event);
+                }
+            });
+        }
+        
+        // フィルター変更イベントリスナー
+        cropFilter.addEventListener('change', applyFilters);
+        fieldFilter.addEventListener('change', applyFilters);
+        taskTypeFilter.addEventListener('change', applyFilters);
     });
 </script>
 {% endblock %}

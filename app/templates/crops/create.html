@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}作物登録 - 農場管理アプリ{% endblock %}
+
+{% block head %}
+<style>
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    .form-control {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    textarea.form-control {
+        height: 100px;
+    }
+    .btn {
+        display: inline-block;
+        padding: 8px 15px;
+        margin-bottom: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.42857143;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        text-decoration: none;
+    }
+    .btn-primary {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-primary:hover {
+        background-color: #0069d9;
+    }
+    .btn-secondary {
+        color: #fff;
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+    .btn-success {
+        color: #fff;
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    .btn-success:hover {
+        background-color: #218838;
+    }
+    .btn-danger {
+        color: #fff;
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+    .help-text {
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+    .stage-container {
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        background-color: #f9f9f9;
+    }
+    .stage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .stage-title {
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    .stage-item {
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        background-color: white;
+    }
+    .stage-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    .stage-controls {
+        display: flex;
+        gap: 5px;
+    }
+    .stage-controls button {
+        padding: 2px 5px;
+        font-size: 0.8em;
+    }
+    .no-stages-message {
+        color: #6c757d;
+        font-style: italic;
+        margin: 10px 0;
+    }
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<h2>新規作物登録</h2>
+<form method="post" id="crop-form">
+    <div class="form-group">
+        <label for="crop_name">作物名:</label>
+        <input type="text" class="form-control" id="crop_name" name="crop_name" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="default_growing_days">標準栽培日数 (オプション):</label>
+        <input type="number" class="form-control" id="default_growing_days" name="default_growing_days" min="1" max="365">
+        <div class="help-text">播種/定植から収穫までの標準的な日数</div>
+    </div>
+    
+    <div class="form-group">
+        <label for="season_options">栽培適期 (オプション):</label>
+        <input type="text" class="form-control" id="season_options" name="season_options">
+        <div class="help-text">例: 春(3-5月)、秋(9-11月)</div>
+    </div>
+    
+    <div class="form-group">
+        <label for="description">説明 (オプション):</label>
+        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+    </div>
+    
+    <!-- 栽培ステージセクション -->
+    <div class="form-group stage-container">
+        <div class="stage-header">
+            <div class="stage-title">栽培ステージ</div>
+            <button type="button" class="btn btn-success" id="add-stage-btn">ステージを追加</button>
+        </div>
+        <div class="help-text">作物の栽培ステージ（播種、苗管理、植え付け、収穫など）とそれにかかる日数を登録します。</div>
+        
+        <div id="stages-list">
+            <div class="no-stages-message">ステージが登録されていません。「ステージを追加」ボタンをクリックしてステージを追加してください。</div>
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">登録</button>
+    <a href="{{ url_for('main.list_crops') }}" class="btn btn-secondary">キャンセル</a>
+</form>
+
+<!-- ステージ項目のテンプレート（非表示） -->
+<div id="stage-template" style="display: none;">
+    <div class="stage-item" data-stage-index="{index}">
+        <div class="stage-item-header">
+            <div>
+                <input type="text" class="form-control" name="stages[{index}][stage_name]" placeholder="ステージ名（例：播種、苗管理）" required>
+            </div>
+            <div class="stage-controls">
+                <button type="button" class="btn btn-danger remove-stage-btn">削除</button>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <div style="flex: 1;">
+                <label>開始日からの日数:</label>
+                <input type="number" class="form-control" name="stages[{index}][days_from_start]" min="0" max="365" required>
+            </div>
+            <div style="flex: 1;">
+                <label>表示順:</label>
+                <input type="number" class="form-control" name="stages[{index}][order]" value="{index}" min="0">
+            </div>
+        </div>
+        <div style="margin-top: 10px;">
+            <label>説明 (オプション):</label>
+            <textarea class="form-control" name="stages[{index}][description]" rows="2"></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        let stageIndex = 0;
+        
+        // ステージ追加ボタンのクリックイベント
+        $('#add-stage-btn').click(function() {
+            addStage();
+        });
+        
+        // ステージ追加関数
+        function addStage() {
+            // テンプレートからステージ項目を複製
+            const stageTemplate = $('#stage-template').html();
+            const stageHtml = stageTemplate.replace(/{index}/g, stageIndex);
+            
+            // ステージリストに追加
+            $('#stages-list').append(stageHtml);
+            
+            // 「ステージがありません」メッセージを非表示
+            $('.no-stages-message').hide();
+            
+            // ステージ削除ボタンのイベントを設定
+            $(`[data-stage-index="${stageIndex}"] .remove-stage-btn`).click(function() {
+                $(this).closest('.stage-item').remove();
+                
+                // ステージが0件になったら「ステージがありません」メッセージを表示
+                if ($('.stage-item').length === 0) {
+                    $('.no-stages-message').show();
+                }
+            });
+            
+            stageIndex++;
+        }
+        
+        // フォーム送信前の処理
+        $('#crop-form').submit(function() {
+            // ステージ項目のインデックスを振り直す
+            $('.stage-item').each(function(idx) {
+                const stageIdx = $(this).data('stage-index');
+                $(this).find(`[name^="stages[${stageIdx}]"]`).each(function() {
+                    const newName = $(this).attr('name').replace(`stages[${stageIdx}]`, `stages[${idx}]`);
+                    $(this).attr('name', newName);
+                });
+            });
+            
+            return true;
+        });
+    });
+</script>
+{% endblock %}
